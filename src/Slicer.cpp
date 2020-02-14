@@ -30,7 +30,7 @@ void Slicer::sliceGeometry(const Geometry &geometry /*, SliceJobSettings */) {
             std::ofstream ofile;
             ofile.open ("test/csv/slice" + std::to_string(sliceCount) + ".csv");
             for (auto &[key, val]: dots) {
-               ofile << val[0] << "," << val[1] << std::endl;
+               ofile << val[0] << " " << val[1] << std::endl;
             }
             ofile.close();
 
