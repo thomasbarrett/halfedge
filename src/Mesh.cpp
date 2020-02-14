@@ -126,9 +126,6 @@ Geometry::Geometry(std::istream &f) {
         }
     }
 
-    std::cout << "vertices: " << positions_.size() << std::endl;
-    std::cout << "faces: " << faces.size() << std::endl;\
-
     mesh_ = std::make_unique<Mesh>(positions_.size(), faces);
 }
 

@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 #include <array>
+#include <memory>
 
 #ifndef MESH_HPP
 #define MESH_HPP
