@@ -75,7 +75,9 @@ private:
 public:
     Mesh(int vertexCount, const std::vector<std::array<int, 3>> &faces);
 
+    bool closed() const;
     int eulerCharacteristic() const;
+
     const std::vector<Vertex>& vertices() const { return vertices_; }
     const std::vector<Edge>& edges() const { return edges_; }
     const std::vector<Face>& faces() const { return faces_; }
@@ -87,17 +89,17 @@ public:
  * 
  */
 class Geometry {
-private:
-    std::vector<std::array<float, 3>> positions_;
-    std::unique_ptr<Mesh> mesh_;
-protected:
 public:
+    using Point = std::array<float, 3>;
     Geometry() = default;
     Geometry(std::istream &);
     virtual ~Geometry() = default;
 
     const Mesh& mesh() const { return *mesh_; }
-    const std::vector<std::array<float, 3>>& positions() const;
+    const std::vector<Point>& positions() const;
+private:
+    std::vector<std::array<float, 3>> positions_;
+    std::unique_ptr<Mesh> mesh_;
 };
 
 #endif /* MESH_HPP */

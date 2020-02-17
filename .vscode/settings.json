@@ -76,6 +76,11 @@
         "memory_resource": "cpp",
         "cinttypes": "cpp",
         "map": "cpp",
-        "__tree": "cpp"
+        "__tree": "cpp",
+        "future": "cpp",
+        "regex": "cpp",
+        "set": "cpp",
+        "shared_mutex": "cpp",
+        "variant": "cpp"
     }
 }
