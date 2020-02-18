@@ -13,15 +13,25 @@
 #define MESH_HPP
 
 struct HalfEdge;
-
+struct Vertex;
+struct Edge;
+struct Corner;
+struct Face;
 /**
  * 
  */
-struct Vertex {
+struct HalfEdge {
     int index = -1;
-    HalfEdge *halfedge = nullptr;
-    friend class Mesh;
+    Vertex *vertex = nullptr;
+    Edge *edge = nullptr;
+    Face *face = nullptr;
+    Corner *corner = nullptr;
+    HalfEdge *next = nullptr;
+    HalfEdge *prev = nullptr;
+    HalfEdge *twin = nullptr;
+    bool onBoundary = true;
 };
+
 
 /**
  * 
@@ -29,6 +39,9 @@ struct Vertex {
 struct Edge {
     int index = -1;
     HalfEdge *halfedge = nullptr;
+    std::vector<Face*> adjacentFaces() const {
+        return {halfedge->face, halfedge->twin->face};
+    }
 };
 
 /**
@@ -45,21 +58,48 @@ struct Corner {
 struct Face {
     int index = -1;
     HalfEdge *halfedge = nullptr;
+
+    std::vector<Edge*> adjacentEdges() const {
+        return {
+            halfedge->edge,
+            halfedge->next->edge,
+            halfedge->next->next->edge
+        };
+    }
+
+    std::vector<Vertex*> adjacentVertices() const {
+        return {
+            halfedge->vertex,
+            halfedge->next->vertex,
+            halfedge->next->next->vertex
+        };
+    }
+
+    std::vector<HalfEdge*> adjacentHalfEdges() const {
+        return {
+            halfedge,
+            halfedge->next,
+            halfedge->next->next
+        };
+    }
 };
 
 /**
  *
  */
-struct HalfEdge {
+
+struct Vertex {
     int index = -1;
-    Vertex *vertex = nullptr;
-    Edge *edge = nullptr;
-    Face *face = nullptr;
-    Corner *corner = nullptr;
-    HalfEdge *next = nullptr;
-    HalfEdge *prev = nullptr;
-    HalfEdge *twin = nullptr;
-    bool onBoundary = true;
+    HalfEdge *halfedge = nullptr;
+    std::vector<Face*> adjacentFaces() const {
+        std::vector<Face*> faces;
+        HalfEdge *h = halfedge;
+        do {
+            faces.push_back(h->face);
+            h = h->prev->twin;
+        } while (h != halfedge);
+        return faces;
+    }
 };
 
 /**
