@@ -36,10 +36,7 @@ int main(int argc, char const *argv[]) {
     }
 
     Geometry geometry{file};
-    std::cout << "info: mesh loaded" << std::endl;
-
     Slicer::sliceGeometry(geometry);
-    std::cout << "info: slicing complete" << std::endl;
 
     return 0;
     

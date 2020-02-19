@@ -7,8 +7,13 @@
 #include <filesystem>
 #include <algorithm>
 #include <string>
+#include <Progress.h>
 
 Mesh::Mesh(int vertexCount, const std::vector<std::array<int, 3>> &faces) {
+
+    std::cout << "info: loading mesh"  << std::endl;
+    ProgressBar progress;
+
     // The size of some fields are known ahead of time based on simple
     // geometrix properties of a pure simplicial complex. 
     vertices_.resize(vertexCount);
@@ -23,14 +28,16 @@ Mesh::Mesh(int vertexCount, const std::vector<std::array<int, 3>> &faces) {
     // uniquelly identify each edge.
     std::map<std::pair<int, int>, std::pair<HalfEdge*, bool>> edges;
 
-    std::cout << "vertices: " << vertices_.size() << std::endl;
-
     // Associate each vertex with an index.
     for (int i = 0; i < vertexCount; i++) {
         vertices_[i].index = i;
     }
 
     for (int i = 0; i < faces.size(); i++) {
+        if (i % (faces.size() / 100) == 0) {
+            progress.update((float) i / faces.size());
+        }
+
         auto &face = faces[i];
         
         // Associate each face with an index and one of its half-edges.
@@ -91,6 +98,7 @@ Mesh::Mesh(int vertexCount, const std::vector<std::array<int, 3>> &faces) {
         assert(h.twin->twin == &h);
     }
 
+    progress.finish();
 }
 
 bool Mesh::closed() const {
@@ -125,6 +133,8 @@ Geometry::Geometry(std::istream &f) {
     float r[3];
     int i[3];
     std::vector<std::array<int, 3>> faces;
+
+    std::cout << "info: reading file" << std::endl;
 
     while (!(f >> first).eof()) {  
 

@@ -10,12 +10,15 @@ public:
     static void sliceGeometry(const Geometry &g /*, SliceJobSettings */);
 
 private:
-    using Point = std::array<double, 2>;
     using Intersection = std::variant<const Edge*, const Vertex*>;
+    using Edges = std::multimap<Intersection, Intersection>;
+    using Point = std::array<double, 2>;
+    using Points = std::map<Intersection, Point>;
     using Polygon = std::vector<Point>;
     using Polygons = std::vector<Polygon>;
 
-    static void generateDots(const Geometry &g, int sliceCount, double z);
+    static std::pair<Points, Edges> sliceTriangles(const Geometry &g, double z);
+    static Polygons computeContours(const Geometry &g, const Points &points, Edges edges);
     static void exportPolygons(const Polygons &polygons, const std::string &path);
 };
 
