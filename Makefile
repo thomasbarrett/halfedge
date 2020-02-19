@@ -6,6 +6,8 @@ SRCS = Mesh.cpp Slicer.cpp
 
 # Compilation Option Processing
 OBJS = $(SRCS:%.cpp=obj/%.o)
+$(shell mkdir -p obj)
+$(shell mkdir -p build)
 
 all: build/slicer build/test
 
@@ -19,5 +21,5 @@ obj/%.o: src/%.cpp
 	$(CPP) $(CPPFLAGS) -c -o $@ $<
 
 clean:
-	rm -f obj/*
-	rm -f build/*
+	rm -r obj
+	rm -r build
