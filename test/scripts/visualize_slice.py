@@ -1,22 +1,25 @@
 import matplotlib.pyplot as plt
-import matplotlib.animation as animation
 import numpy as np
+import glob
 
-fig, ax = plt.subplots()
-ax.set_xlim(-1, 1)
-ax.set_ylim(-1, 1)
-ln, = plt.plot([], [], 'o', markersize=1)
+print_platform_width = 2
+print_platform_depth = 3
+fig, ax = plt.subplots(figsize=(2, 3))
+plt.margins(0, 0)
+plt.axis('off')
 
-def update(i):
-    slice_vertices = np.loadtxt(f'test/csv/slice{i}.csv')
-    if slice_vertices.shape[0] != 0:
-        xmin, ymin = np.amin(slice_vertices, axis=0)
-        xmax, ymax = np.amax(slice_vertices, axis=0)
-        ax.set_xlim(xmin, xmax)
-        ax.set_ylim(ymin, ymax)
-        ln.set_data(slice_vertices[:,0], slice_vertices[:,1])
-    return ln,
-
-
-ani = animation.FuncAnimation(fig, update, frames=range(300))
-plt.show()
+for i in range(300):
+    ax.clear()
+    ax.set_xlim(-print_platform_width/2, print_platform_width/2)
+    ax.set_ylim(-print_platform_depth/2, print_platform_depth/2)
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+    
+    
+    polygons = glob.glob(f'test/csv/slice{i}_*.csv')
+    for polygon in polygons:
+        vertices = np.loadtxt(polygon)
+        plt.fill(vertices[:,0], vertices[:,1], 'black')
+    
+    plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
+    plt.savefig(f'test/img/slice{i}.png')
