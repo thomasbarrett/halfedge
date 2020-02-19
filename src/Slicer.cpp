@@ -10,6 +10,7 @@
 #include <Mesh.h>
 #include <Slicer.h>
 #include <Progress.h>
+#include <cairo/cairo.h>
 
 void Slicer::sliceGeometry(const Geometry &geometry /*, SliceJobSettings */) {
         assert(geometry.mesh().closed());
@@ -34,8 +35,8 @@ void Slicer::sliceGeometry(const Geometry &geometry /*, SliceJobSettings */) {
         for (double z = minz; z <= maxz; z += (maxz - minz) / 300) {
             auto [points, edges] = sliceTriangles(geometry, z);
             const Polygons &polygons = computeContours(geometry, points, std::move(edges));
-            const auto polygon_path = "test/csv/slice" + std::to_string(sliceCount);
-            exportPolygons(polygons, polygon_path);
+            const auto polygon_path = "test/img/slice" + std::to_string(sliceCount);
+            exportPolygonsToPNG(polygons, polygon_path + ".png");
             progress.update(sliceCount / 300.0);
             sliceCount += 1;
         } 
@@ -129,7 +130,9 @@ Slicer::Polygons Slicer::computeContours(const Geometry &g, const Points &points
             }
        
             std::vector<Slicer::Intersection> next{next_set.begin(), next_set.end()};
-            assert(next.size() == 2);
+            if (next.size() != 2) {
+                std::cout << "warning: ambiguous case: " << next.size() << std::endl;
+            }
             auto n1 = next[0];
             auto n2 = next[1];
             edges.erase(e);
@@ -167,4 +170,37 @@ void Slicer::exportPolygons(const Polygons &polygons, const std::string &path) {
         ofile.close();
         polygon_index += 1;
     }
+}
+
+
+void Slicer::exportPolygonsToPNG(const Polygons &polygons, const std::string &path) {
+    cairo_surface_t *surface; // Declarations
+    cairo_t *cr;
+
+    surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,1920,1080);
+    cr = cairo_create(surface);
+    cairo_save(cr);
+    cairo_set_source_rgb(cr, 0, 0, 0);
+    cairo_paint(cr);
+    cairo_restore(cr);
+    cairo_translate(cr, 960, 540);
+    cairo_scale(cr, 20, 20);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
+    cairo_set_fill_rule(cr, CAIRO_FILL_RULE_EVEN_ODD);
+
+    for (const auto &polygon: polygons) {
+        cairo_set_source_rgb(cr, 1, 1, 1);
+        cairo_set_line_width(cr, 0.05);
+        cairo_move_to (cr, polygon[0][0], polygon[0][1]);
+        for (const auto &point: polygon) {
+            cairo_line_to (cr, point[0], point[1]);
+        }
+    }
+
+    cairo_stroke_preserve(cr);
+    cairo_fill(cr);
+
+    cairo_surface_write_to_png(surface, path.c_str());
+    cairo_surface_destroy(surface);
+    cairo_destroy(cr);
 }

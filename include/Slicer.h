@@ -20,6 +20,7 @@ private:
     static std::pair<Points, Edges> sliceTriangles(const Geometry &g, double z);
     static Polygons computeContours(const Geometry &g, const Points &points, Edges edges);
     static void exportPolygons(const Polygons &polygons, const std::string &path);
+    static void exportPolygonsToPNG(const Polygons &polygons, const std::string &path);
 };
 
 #endif /* SLICER_H */
