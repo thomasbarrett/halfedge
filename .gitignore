@@ -3,3 +3,4 @@ test/csv/*
 obj/*
 build/*
 */.DS_Store
+.vscode
