@@ -7,6 +7,7 @@
 #include <Mesh.h>
 #include <Slicer.h>
 #include <locale>
+#include <MarchingCubes.h>
 
 bool isFileOBJ(std::string path) {
     std::string fileExtension = path.substr(path.find("."));
@@ -36,6 +37,7 @@ int main(int argc, char const *argv[]) {
     }
 
     Geometry geometry{file};
+    MarchingCubes(geometry);
     Slicer::sliceGeometry(geometry);
 
     return 0;

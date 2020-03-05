@@ -29,10 +29,13 @@ void Slicer::sliceGeometry(const Geometry &geometry /*, SliceJobSettings */) {
         float maxz = (*max)[2];
 
         std::cout << "info: start slicing" << std::endl;
-        
+
+        int slice_width = 0.1;
+        int n_slices = (maxz - minz) / slice_width;
+
         ProgressBar progress;
         int sliceCount = 0;
-        for (double z = minz; z <= maxz; z += (maxz - minz) / 300) {
+        for (double z = minz; z <= maxz; z += slice_width) {
             auto [points, edges] = sliceTriangles(geometry, z);
             const Polygons &polygons = computeContours(geometry, points, std::move(edges));
             const auto polygon_path = "test/img/slice" + std::to_string(sliceCount);

@@ -130,7 +130,7 @@ public:
  */
 class Geometry {
 public:
-    using Point = std::array<float, 3>;
+    using Point = std::array<double, 3>;
     Geometry() = default;
     Geometry(std::istream &);
     virtual ~Geometry() = default;
@@ -138,7 +138,7 @@ public:
     const Mesh& mesh() const { return *mesh_; }
     const std::vector<Point>& positions() const;
 private:
-    std::vector<std::array<float, 3>> positions_;
+    std::vector<std::array<double, 3>> positions_;
     std::unique_ptr<Mesh> mesh_;
 };
 

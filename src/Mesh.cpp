@@ -11,6 +11,8 @@
 
 Mesh::Mesh(int vertexCount, const std::vector<std::array<int, 3>> &faces) {
 
+    assert(faces.size() > 0);
+
     std::cout << "info: loading mesh"  << std::endl;
     ProgressBar progress;
 
@@ -34,7 +36,7 @@ Mesh::Mesh(int vertexCount, const std::vector<std::array<int, 3>> &faces) {
     }
 
     for (int i = 0; i < faces.size(); i++) {
-        if (i % (faces.size() / 100) == 0) {
+        if ((faces.size() / 100) != 0 && i % (faces.size() / 100) == 0) {
             progress.update((float) i / faces.size());
         }
 
@@ -130,7 +132,7 @@ std::vector<B> map(std::vector<A> input, const std::function<B(const A&)> &func)
 
 Geometry::Geometry(std::istream &f) {
     std::string first;
-    float r[3];
+    double r[3];
     int i[3];
     std::vector<std::array<int, 3>> faces;
 
@@ -182,7 +184,7 @@ Geometry::Geometry(std::istream &f) {
     mesh_ = std::make_unique<Mesh>(positions_.size(), faces);
 }
 
-const std::vector<std::array<float, 3>>& Geometry::positions() const {
+const std::vector<Geometry::Point>& Geometry::positions() const {
     return positions_;
 }
 
