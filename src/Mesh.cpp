@@ -128,61 +128,106 @@ std::vector<B> map(std::vector<A> input, const std::function<B(const A&)> &func)
     return output;
 }
 
-Geometry::Geometry(std::istream &f) {
-    std::string first;
-    float r[3];
-    int i[3];
-    std::vector<std::array<int, 3>> faces;
+Geometry::Geometry(std::istream &file) {
+    
+    printf("info: reading file\n");
+    ProgressBar progress;
 
-    std::cout << "info: reading file" << std::endl;
+    std::stringstream ss;
+    ss << file.rdbuf();
+    std::string data = ss.str();
+    uint32_t index = 0;
+    uint32_t size = data.size();
+    uint32_t last_progress = 0;
 
-    while (!(f >> first).eof()) {  
+   auto next_word = [&]() {
+        while (data[index] != ' ') {
+            if (data[index] == '\0') return false;
+            index++;
+        }
+        while (data[index] == ' ') {
+            if (data[index] == '\0') return false;
+            index++;
+        }
+        return true;
+    };
 
-        if (first[0] == '#') {
-            f.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        } else if (first == "v") {
-            f >> r[0] >> r[1] >> r[2];
-            positions_.push_back({r[0], r[1], r[2]});
-        } else if (first == "f") {
-            std::string line;
-            std::getline(f, line); 
-            auto words = split(line);
-            std::vector<int> indices;
-            std::transform(words.begin(), words.end(), std::back_inserter(indices), [](auto &s){
-                return std::stoi(s);
-            }); 
-            if (indices.size() == 3) {
-                faces.push_back({indices[0] - 1, indices[1] - 1, indices[2] - 1});
-            } else if (indices.size() == 4) {
-                faces.push_back({indices[0] - 1, indices[1] - 1, indices[2] - 1});
-                faces.push_back({indices[0] - 1, indices[2] - 1, indices[3] - 1});
-            } else {
-                throw std::runtime_error("polygons not supported");
-            }
-        } else if (first == "vt") {
-            f >> r[0] >> r[1];
-        } else if (first == "vn") {
-            f >> r[0] >> r[1] >> r[2];
-        } else if (first == "vp") {
-            throw std::runtime_error("free-form geometry not supported");
-        } else if (first == "l") {
-            throw std::runtime_error("line elements not supported");
-        } else if (first == "g") {
-            f.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    auto next_line = [&]() {
+        while (data[index] != '\n' && data[index] != '\0') {
+            index++;
+        }
+        if (data[index] == '\n') {
+            index++;
+            return true;
         } else {
-            std::cout << "warning: unknown directive: " << first << std::endl;
-            f.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            return false;
+        }
+    };
+
+    do {
+
+        if (data.substr(index, 2) == "v ") {
+            next_word();
+            float x = atof(&data[index]);
+            next_word();
+            float y = atof(&data[index]);
+            next_word();
+            float z = atof(&data[index]);
+            positions_.push_back({x, y, z});
+        } else if (data.substr(index, 2) == "f ") {
+            next_word();
+            int x = atoi(&data[index]);
+            next_word();
+            int y = atoi(&data[index]);
+            next_word();
+            int z = atoi(&data[index]);
+            faces_.push_back({x - 1, y - 1, z - 1});
+
         }
 
-        if (f.fail()) {
-            throw std::runtime_error("invalid obj file");
+        if ((int) (100.0 * index / size) > last_progress) {
+            last_progress = (int) (100.0 * index / size);
+            progress.update((float) index / size);
         }
+
+    } while (next_line());
+
+    
+    progress.finish();
+
+    std::vector<std::array<uint32_t, 3>> triangles;
+    std::vector<std::array<uint32_t, 2>> edges;
+
+    std::map<std::array<uint32_t, 2>, uint32_t> edge_map;
+    for (auto &face: faces_) {
+
+        std::array<uint32_t, 3> t_edges;
+
+        for (int i = 0; i < 3; i++) {
+            uint32_t v1 = face[i];
+            uint32_t v2 = face[(i + 1) % 3];
+            uint32_t vmin = v1 < v2 ? v1: v2;
+            uint32_t vmax = v1 < v2 ? v2: v1;
+            std::array<uint32_t, 2> edge = {vmin, vmax};
+
+            auto it = edge_map.find(edge);
+            if (it == edge_map.end()) {
+                t_edges[i] = edge_map.size();
+                edge_map.emplace(edge, (uint32_t) edge_map.size());
+                edges.push_back(edge);
+            } else {
+                t_edges[i] = it->second;
+            }   
+        }
+        triangles.push_back(t_edges);
     }
 
-    mesh_ = std::make_unique<Mesh>(positions_.size(), faces);
 }
 
 const std::vector<std::array<float, 3>>& Geometry::positions() const {
     return positions_;
 }
 
+const std::vector<Geometry::Triangle>& Geometry::faces() const {
+    return faces_;
+}

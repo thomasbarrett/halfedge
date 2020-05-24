@@ -1,7 +1,7 @@
 # Compilation Options
 # CPP =  ~/Desktop/aarch64-unknown-linux-gnu/bin/aarch64-unknown-linux-gnu-g++
 CPP = clang++
-CPPFLAGS = -Iinclude -std=c++17 -g -lcairo
+CPPFLAGS = -Iinclude -std=c++17 -g -lcairo -O3
 SRCS = Mesh.cpp Slicer.cpp
 
 # Compilation Option Processing

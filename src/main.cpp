@@ -19,8 +19,8 @@ bool isFileOBJ(std::string path) {
 }
 
 int main(int argc, char const *argv[]) {
-    if (argc != 2) {
-        std::cout << "usage: slicer [file.obj]" << std::endl;
+    if (argc != 3) {
+        std::cout << "usage: slicer file.obj dz" << std::endl;
         return 1;
     }
 
@@ -35,8 +35,15 @@ int main(int argc, char const *argv[]) {
         return 1;
     }
 
+    double dz = atof(argv[2]);
+
+    auto start = std::chrono::steady_clock::now();
     Geometry geometry{file};
-    Slicer::sliceGeometry(geometry);
+    auto end = std::chrono::steady_clock::now();
+    float elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() / 1000.0;
+    printf("%.2f seconds\n\n", elapsed);
+
+    Slicer().sliceGeometry(geometry, dz);
 
     return 0;
     

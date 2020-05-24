@@ -8,6 +8,7 @@
 #include <vector>
 #include <array>
 #include <memory>
+#include <cmath>
 
 #ifndef MESH_HPP
 #define MESH_HPP
@@ -112,6 +113,7 @@ private:
     std::vector<Face> faces_;
     std::vector<Corner> corners_;
     std::vector<HalfEdge> halfedges_;
+    
 public:
     Mesh(int vertexCount, const std::vector<std::array<int, 3>> &faces);
 
@@ -131,15 +133,56 @@ public:
 class Geometry {
 public:
     using Point = std::array<float, 3>;
+    using Triangle = std::array<int, 3>;
+
     Geometry() = default;
     Geometry(std::istream &);
     virtual ~Geometry() = default;
 
-    const Mesh& mesh() const { return *mesh_; }
+
+    static std::pair<double, double> minmax(const Geometry &g, const Triangle &t, int axis) {
+        double tminz = INFINITY;
+        double tmaxz = -INFINITY;
+        for (int i = 0; i < 3; i++) {
+            double z = g.positions()[t[i]][axis];
+            if (z < tminz) tminz = z;
+            if (z > tmaxz) tmaxz = z;
+        } 
+        return {tminz, tmaxz};
+    }
+
+
+    static std::pair<double, double> minmax(const Geometry &g, int axis) {
+        auto [eminz, emaxz] = std::minmax_element(
+            g.positions().begin(),
+            g.positions().end(),
+            [axis](auto &a, auto &b) { return a[axis] < b[axis]; }
+        );
+        float minz = (*eminz)[axis];
+        float maxz = (*emaxz)[axis];   
+        return {minz, maxz};
+    }
+
     const std::vector<Point>& positions() const;
+    const std::vector<Triangle>& faces() const;
+
+  
+
 private:
-    std::vector<std::array<float, 3>> positions_;
-    std::unique_ptr<Mesh> mesh_;
+    std::vector<Point> positions_;
+    std::vector<Triangle> faces_;
+
+    std::vector<std::array<uint32_t, 3>> triangles_;
+    std::vector<std::array<uint32_t, 2>> edges_;
+
+public:
+    const std::vector<std::array<uint32_t, 3>>& triangles() const {
+        return triangles_;
+    }
+
+    const std::vector<std::array<uint32_t, 2>>& edges() const {
+        return edges_;
+    }
 };
 
 #endif /* MESH_HPP */
