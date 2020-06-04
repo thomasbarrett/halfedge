@@ -1,6 +1,4 @@
-test/img/*
-test/csv/*
-obj/*
-build/*
-*/.DS_Store
+obj
+build
+.DS_Store
 .vscode
