@@ -1,46 +1,16 @@
+#ifndef GEOM_SLICER_H
+#define GEOM_SLICER_H
 
-#ifndef SLICER_H
-#define SLICER_H
-
-#include <set>
-#include <variant>
-#include <Progress.h>
-#include <unordered_map>
-
+#include <map>
+#include <Mesh.h>
 
 namespace geom {
 
-template <typename T> class FiniteSet {
-private:
-    int size_ = 0;
-    std::array<T, 2> data_;
-public:
-
-    void insert(const T &x) {
-        if (data_[0].first == x.first) return;
-        if (data_[1].first == x.first) return;
-        if (size_ < 2) data_[size_] = x;
-        size_++;
-    }
-
-    size_t size() const { return size_; }
-
-    const std::array<double, 2>& getPoint() const {
-        return (data_[0].first < data_[1].first) ? data_[0].second: data_[1].second;
-    }
-
-    T& operator[](int i) {
-        return data_[i];
-    }
-};
-
-};
-
-
 class Slicer {
 public:
-
-    void sliceGeometry(const Geometry &g, double dz);
+    Slicer(const std::vector<FaceVertexMesh> &g, double dz);
+    std::vector<float> whitelist() const;
+    std::vector<float> write(const std::string &prefix) const;
 
 private:
 
@@ -52,31 +22,33 @@ private:
         std::array<uint64_t, 2> edges; 
     };
 
-    using Intersection = std::pair<uint64_t, std::array<double, 2>>;
+    struct Intersection {
+        uint64_t id = ~static_cast<uint64_t>(0);
+        Point position;
+    };
+
     using Graph = std::map<uint64_t, VertexData>;
-    using Points = std::map<Intersection, Point>;
     using Polygon = std::vector<Point>;
     using Polygons = std::vector<Polygon>;
 
- 
-
-    std::vector<Slicer::Points> points_;
     std::vector<Slicer::Graph> graph_; 
-    std::vector<Slicer::Polygons> polygons_;
-    int slice_count_;
+    std::vector<std::vector<Slicer::Polygons>> polygons_;
+    int slice_count;
 
-    static Intersection make_vertex(uint32_t v, const std::array<double, 2> &p) {
-        return {(uint64_t) v, p};
+    static uint64_t make_vertex(uint32_t v) {
+        return (uint64_t) v;
     }
 
-    static Intersection make_edge(uint32_t v1, uint32_t v2, const std::array<double, 2> &p) {
-        return {v1 < v2 ? (uint64_t) v1 << 32 | v2: (uint64_t) v2 << 32 | v1, p};
+    static uint64_t make_edge(uint32_t v1, uint32_t v2) {
+        return v1 < v2 ? (uint64_t) v1 << 32 | v2: (uint64_t) v2 << 32 | v1;
     }
 
-    void sliceTriangles(const Geometry &g, double dz);
-    void computeContours(const Geometry &g);
-    void exportPolygons(const std::string &path);
-    void exportImages(const std::string &path_prefix);
+    std::array<float, 2> minmax(const std::vector<FaceVertexMesh> &meshes);
+    void sliceTriangles(const FaceVertexMesh &geometry, std::array<float, 2> bounds, double dz);
+    void computeContours(const FaceVertexMesh &g, std::vector<Slicer::Polygons> &polygons);
+    std::vector<float> exportImages(const std::string &path_prefix) const;
 };
 
-#endif /* SLICER_H */
+}
+
+#endif /* GEOM_SLICER_H */

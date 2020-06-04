@@ -1,12 +1,8 @@
 #include <iostream>
-#include <fstream>
-#include <vector>
-#include <array>
-#include <map>
-#include <algorithm>
+
 #include <Mesh.h>
 #include <Slicer.h>
-#include <locale>
+#include <Timer.h>
 
 bool isFileOBJ(std::string path) {
     std::string fileExtension = path.substr(path.find("."));
@@ -29,21 +25,32 @@ int main(int argc, char const *argv[]) {
         return 1;
     }
 
-    std::ifstream file{argv[1]};
-    if (file.bad()) {
-        std::cout << "error: input file not found" << std::endl;
-        return 1;
-    }
-
     double dz = atof(argv[2]);
 
-    auto start = std::chrono::steady_clock::now();
-    Geometry geometry{file};
-    auto end = std::chrono::steady_clock::now();
-    float elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() / 1000.0;
-    printf("%.2f seconds\n\n", elapsed);
+    geom::Timer t;
+    printf("info: loading meshes\n");
+    geom::FaceVertexMesh mesh0{argv[1]};
+    std::vector<geom::FaceVertexMesh> meshes;
+    for (int i = -1; i < 1; i++) {
+        for (int j = -1; j < 1; j++) {
+            geom::FaceVertexMesh mesh = mesh0;
+            float matrix [4][4] = {
+                {1, 0, 0, 20.0f * i},
+                {0, 1, 0, 20.0f * j},
+                {0, 0, 1, 0.0},
+                {0, 0, 0, 1}
+            };
+            mesh.transform(matrix);
+            meshes.push_back(mesh);
+        }
+    }
+    printf("%.2f seconds\n\n", t.duration());
 
-    Slicer().sliceGeometry(geometry, dz);
+    printf("info: slicing\n");
+    geom::Timer t2;
+    geom::Slicer slices(meshes, dz);
+    std::vector<float> whitelist = slices.whitelist();
+    printf("%.2f seconds\n\n", t2.duration());
 
     return 0;
     

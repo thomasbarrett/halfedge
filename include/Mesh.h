@@ -1,188 +1,204 @@
-/**
- * \file Mesh.h
- * \author Thomas Barrett
- * \brief Mesh
- */
+#ifndef GEOM_MESH_H
+#define GEOM_MESH_H
 
 #include <string>
-#include <vector>
 #include <array>
-#include <memory>
+#include <vector>
+#include <map>
 #include <cmath>
+#include <fstream>
+#include <sstream>
 
-#ifndef MESH_HPP
-#define MESH_HPP
-
-struct HalfEdge;
-struct Vertex;
-struct Edge;
-struct Corner;
-struct Face;
-/**
- * 
- */
-struct HalfEdge {
-    int index = -1;
-    Vertex *vertex = nullptr;
-    Edge *edge = nullptr;
-    Face *face = nullptr;
-    Corner *corner = nullptr;
-    HalfEdge *next = nullptr;
-    HalfEdge *prev = nullptr;
-    HalfEdge *twin = nullptr;
-    bool onBoundary = true;
-};
-
+namespace geom {
 
 /**
- * 
+ * A face-vertex mesh representation is one of the simplest possible mesh
+ * data structures, and is a common format for storing mesh data on disk.
+ * The face-vertex mesh stores a table of faces and a table of vertices.
  */
-struct Edge {
-    int index = -1;
-    HalfEdge *halfedge = nullptr;
-    std::vector<Face*> adjacentFaces() const {
-        return {halfedge->face, halfedge->twin->face};
-    }
-};
-
-/**
- * 
- */
-struct Corner {
-    int index = -1;
-    HalfEdge *halfedge = nullptr;
-};
-
-/**
- * 
- */
-struct Face {
-    int index = -1;
-    HalfEdge *halfedge = nullptr;
-
-    std::vector<Edge*> adjacentEdges() const {
-        return {
-            halfedge->edge,
-            halfedge->next->edge,
-            halfedge->next->next->edge
-        };
-    }
-
-    std::vector<Vertex*> adjacentVertices() const {
-        return {
-            halfedge->vertex,
-            halfedge->next->vertex,
-            halfedge->next->next->vertex
-        };
-    }
-
-    std::vector<HalfEdge*> adjacentHalfEdges() const {
-        return {
-            halfedge,
-            halfedge->next,
-            halfedge->next->next
-        };
-    }
-};
-
-/**
- *
- */
-
-struct Vertex {
-    int index = -1;
-    HalfEdge *halfedge = nullptr;
-    std::vector<Face*> adjacentFaces() const {
-        std::vector<Face*> faces;
-        HalfEdge *h = halfedge;
-        do {
-            faces.push_back(h->face);
-            h = h->prev->twin;
-        } while (h != halfedge);
-        return faces;
-    }
-};
-
-/**
- * 
- */
-class Mesh {
+class FaceVertexMesh {
+public:
+    using Triangle = std::array<uint32_t, 3>;
+    using Vertex = std::array<float, 3>;
 private:
+    std::vector<Triangle> triangles_;
     std::vector<Vertex> vertices_;
-    std::vector<Edge> edges_;
-    std::vector<Face> faces_;
-    std::vector<Corner> corners_;
-    std::vector<HalfEdge> halfedges_;
-    
 public:
-    Mesh(int vertexCount, const std::vector<std::array<int, 3>> &faces);
 
-    bool closed() const;
-    int eulerCharacteristic() const;
+    /**
+     * Construct a face-vertex mesh from a file found at the given path.
+     * The file is assumed to be in wavefront OBJ format. Note that most
+     * OBJ data, including normals, textures, and materials information
+     * is ignored. Only connectivity information is considered.
+     */
+    FaceVertexMesh(const std::string &path) {
+        std::ifstream file;
+        file.open(path);
+        std::stringstream ss;
+        ss << file.rdbuf();
+        std::string data = ss.str();
+        uint32_t index = 0;
+        uint32_t size = data.size();
+        uint32_t last_progress = 0;
 
+        auto next_word = [&]() {
+            while (data[index] != ' ') {
+                if (data[index] == '\0') return false;
+                index++;
+            }
+            while (data[index] == ' ') {
+                if (data[index] == '\0') return false;
+                index++;
+            }
+            return true;
+        };
+
+        auto next_line = [&]() {
+            while (data[index] != '\n' && data[index] != '\0') {
+                index++;
+            }
+            if (data[index] == '\n') {
+                index++;
+                return true;
+            } else {
+                return false;
+            }
+        };
+
+        do {
+
+            if (data.substr(index, 2) == "v ") {
+                next_word();
+                float x = atof(&data[index]);
+                next_word();
+                float y = atof(&data[index]);
+                next_word();
+                float z = atof(&data[index]);
+                vertices_.push_back({x, y, z});
+            } else if (data.substr(index, 2) == "f ") {
+                next_word();
+                uint32_t x = atoi(&data[index]);
+                next_word();
+                uint32_t y = atoi(&data[index]);
+                next_word();
+                uint32_t z = atoi(&data[index]);
+                triangles_.push_back({x - 1, y - 1, z - 1});
+
+            }
+        } while (next_line());
+    }
+    
+    const std::vector<Triangle>& triangles() const { return triangles_; }
     const std::vector<Vertex>& vertices() const { return vertices_; }
-    const std::vector<Edge>& edges() const { return edges_; }
-    const std::vector<Face>& faces() const { return faces_; }
-    const std::vector<Corner>& corners() const { return corners_; }
-    const std::vector<HalfEdge>& halfedges() const { return halfedges_; }
+
+    std::array<float, 2> minmax(const Triangle& t, int dim) const {
+        float min = +INFINITY;
+        float max = -INFINITY;
+        for (int i = 0; i < 3; i++) {
+            float v = vertices_[t[i]][dim];
+            if (v < min) min = v;
+            if (v > max) max = v;
+        }
+        return {min, max};
+    }
+
+    std::array<float, 2> minmax(int dim) const {
+        float min = +INFINITY;
+        float max = -INFINITY;
+        for (auto &v_: vertices_) {
+            float v = v_[dim];
+            if (v < min) min = v;
+            if (v > max) max = v;
+        }
+        return {min, max};
+    }
+
+    void transform(float matrix[4][4]) {
+        for (auto& v0: vertices_) {
+            std::array<float, 4> v {v0[0], v0[1], v0[2], 1};
+            for (int i = 0; i < 3; i++) {
+                v0[i] = 0.0;
+                for (int j = 0; j < 4; j++) {
+                    v0[i] += v[j] * matrix[i][j];
+                }
+            }
+        }   
+    }
 };
 
 /**
- * 
+ * An indexed-edge mesh representation is a simplified winged-edge mesh that
+ * stores three tables: triangles, edges, and vertices. Unlike a winged-edge
+ * mesh, nearby connectivity information - the 'wings' of a winged edge mesh
+ * are not stored explicitly.
  */
-class Geometry {
+class IndexedEdgeMesh {
 public:
-    using Point = std::array<float, 3>;
-    using Triangle = std::array<int, 3>;
-
-    Geometry() = default;
-    Geometry(std::istream &);
-    virtual ~Geometry() = default;
-
-
-    static std::pair<double, double> minmax(const Geometry &g, const Triangle &t, int axis) {
-        double tminz = INFINITY;
-        double tmaxz = -INFINITY;
-        for (int i = 0; i < 3; i++) {
-            double z = g.positions()[t[i]][axis];
-            if (z < tminz) tminz = z;
-            if (z > tmaxz) tmaxz = z;
-        } 
-        return {tminz, tmaxz};
-    }
-
-
-    static std::pair<double, double> minmax(const Geometry &g, int axis) {
-        auto [eminz, emaxz] = std::minmax_element(
-            g.positions().begin(),
-            g.positions().end(),
-            [axis](auto &a, auto &b) { return a[axis] < b[axis]; }
-        );
-        float minz = (*eminz)[axis];
-        float maxz = (*emaxz)[axis];   
-        return {minz, maxz};
-    }
-
-    const std::vector<Point>& positions() const;
-    const std::vector<Triangle>& faces() const;
-
-  
-
+    using Triangle = std::array<uint32_t, 3>;
+    using Edge = std::array<uint32_t, 2>;
+    using Vertex = std::array<float, 3>;
 private:
-    std::vector<Point> positions_;
-    std::vector<Triangle> faces_;
-
-    std::vector<std::array<uint32_t, 3>> triangles_;
-    std::vector<std::array<uint32_t, 2>> edges_;
-
+    std::vector<Triangle> triangles_;
+    std::vector<Edge> edges_;
+    std::vector<Vertex> vertices_;
 public:
-    const std::vector<std::array<uint32_t, 3>>& triangles() const {
-        return triangles_;
+
+    IndexedEdgeMesh(const FaceVertexMesh &mesh) {
+        vertices_ = mesh.vertices();
+        std::map<Edge, uint32_t> edge_map;
+        for (auto &triangle: mesh.triangles()) {
+            std::array<uint32_t, 3> edges;
+            for (int i = 0; i < 3; i++) {
+
+                uint32_t v1 = triangle[i];
+                uint32_t v2 = triangle[(i + 1) % 3];
+                uint32_t vmin = v1 < v2 ? v1: v2;
+                uint32_t vmax = v1 < v2 ? v2: v1;
+
+                Edge edge = {vmin, vmax};
+                auto it = edge_map.find(edge);
+                if (it == edge_map.end()) {
+                    edges[i] = edge_map.size();
+                    edge_map.emplace(edge, (uint32_t) edge_map.size());
+                    edges_.push_back(edge);
+                } else {
+                    edges[i] = it->second;
+                }   
+            }
+            triangles_.push_back(edges);
+        }
+        
     }
 
-    const std::vector<std::array<uint32_t, 2>>& edges() const {
-        return edges_;
+    const std::vector<Triangle>& triangles() const { return triangles_; }
+    const std::vector<Edge>& edges() const { return edges_; }
+    const std::vector<Vertex>& vertices() const { return vertices_; }
+
+    std::array<float, 2> minmax(const Triangle& t, int dim) const {
+        float min = +INFINITY;
+        float max = -INFINITY;
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 2; j++) {
+                float v = vertices_[edges_[t[i]][j]][dim];
+                if (v < min) min = v;
+                if (v > max) max = v;
+            }
+        }
+        return {min, max};
+    }
+
+    std::array<float, 2> minmax(int dim) const {
+        float min = +INFINITY;
+        float max = -INFINITY;
+        for (auto &v_: vertices_) {
+            float v = v_[dim];
+            if (v < min) min = v;
+            if (v > max) max = v;
+        }
+        return {min, max};
     }
 };
 
-#endif /* MESH_HPP */
+};
+
+#endif /* GEOM_MESH_H */
